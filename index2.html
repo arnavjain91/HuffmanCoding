@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Huffman Coding Compression Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .info-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #steps {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .step {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #28a745;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+        }
+
+        #treeVisualization {
+            margin-top: 20px;
+            padding: 10px;
+            overflow-x: auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .stat-item {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Huffman Coding Compression Demo</h1>
+        
+        
+        <div class="info-section">
+            <h2>About Huffman Coding</h2>
+            <p>Huffman coding is a data compression technique that assigns variable-length codes to characters based on their frequency of occurrence. More frequent characters get shorter codes, resulting in overall compression of the data.</p>
+            <p>Key features:</p>
+            <ul>
+                <li>Lossless compression algorithm</li>
+                <li>Uses a priority queue to build an optimal prefix tree</li>
+                <li>Characters with higher frequency get shorter codes</li>
+                <li>Optimal for text compression when character frequencies vary significantly</li>
+            </ul>
+            <p>Chatbot to know more about Huffman Coding</p>
+            <a href="https://tranquil-pie-177143.netlify.app">Chat with AI</a>
+        </div>
+
+        <div class="section">
+            <h2>Input Text</h2>
+            <textarea id="input" placeholder="Enter text to compress..."></textarea>
+            <button onclick="compress()">Compress</button>
+            <button onclick="clearAll()">Clear</button>
+        </div>
+
+        <div class="section">
+            <h2>Statistics</h2>
+            <div class="stats">
+                <div class="stat-item">
+                    <strong>Original Size:</strong>
+                    <div id="originalSize">0 bytes</div>
+                </div>
+                <div class="stat-item">
+                    <strong>Compressed Size:</strong>
+                    <div id="compressedSize">0 bytes</div>
+                </div>
+                <div class="stat-item">
+                    <strong>Compression Ratio:</strong>
+                    <div id="compressionRatio">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Compression Steps</h2>
+            <div id="steps"></div>
+        </div>
+
+        <div class="section">
+            <h2>Huffman Tree Visualization</h2>
+            <div id="treeVisualization"></div>
+            <p>The Huffman tree is visualized so that the binary codes for the characters can be generated</p>
+        </div>
+
+        <div class="section">
+            <h2>Character Codes</h2>
+            <div id="codes"></div>
+        </div>
+
+        <div class="section">
+            <h2>Compressed Output</h2>
+            <div>
+                <h3>Binary:</h3>
+                <textarea id="output" readonly></textarea>
+            </div>
+            <div>
+                <h3>Characters:</h3>
+                <textarea id="charOutput" readonly></textarea>
+            </div>
+            <p>The reason you see characters like «Å'~ is because:</p>
+
+            <p>1. The compressed binary data is being grouped into 8-bit chunks</p>
+                <p>2. Each chunk is interpreted as a character code</p>
+                    <p>3. Many of these codes correspond to special or control characters in ASCII/UTF-8</p>
+                        <p>4. This is normal and expected - the data isn't meant to be read as text</p>
+        </div>
+    </div>
+
+    <script>
+        class HuffmanNode {
+            constructor(char, freq) {
+                this.char = char;
+                this.freq = freq;
+                this.left = null;
+                this.right = null;
+            }
+        }
+
+        class HuffmanCoder {
+            constructor() {
+                this.codes = {};
+                this.steps = [];
+            }
+
+            getFrequencies(text) {
+                const frequencies = {};
+                for (let char of text) {
+                    frequencies[char] = (frequencies[char] || 0) + 1;
+                }
+                return frequencies;
+            }
+
+            buildTree(frequencies) {
+                const pq = Object.entries(frequencies)
+                    .map(([char, freq]) => new HuffmanNode(char, freq))
+                    .sort((a, b) => a.freq - b.freq);
+
+                this.steps.push(`Created priority queue with ${pq.length} characters`);
+
+                while (pq.length > 1) {
+                    const left = pq.shift();
+                    const right = pq.shift();
+                    const parent = new HuffmanNode(null, left.freq + right.freq);
+                    parent.left = left;
+                    parent.right = right;
+                    
+                    let insertIndex = 0;
+                    while (insertIndex < pq.length && pq[insertIndex].freq < parent.freq) {
+                        insertIndex++;
+                    }
+                    pq.splice(insertIndex, 0, parent);
+
+                    this.steps.push(`Combined nodes: ${left.char || 'internal'} (${left.freq}) and ${right.char || 'internal'} (${right.freq})`);
+                }
+
+                return pq[0];
+            }
+            
+
+            generateCodes(node, code = '') {
+                if (node.char) {
+                    this.codes[node.char] = code;
+                    this.steps.push(`Assigned code ${code} to character '${node.char}'`);
+                    return;
+                }
+
+                if (node.left) this.generateCodes(node.left, code + '0');
+                if (node.right) this.generateCodes(node.right, code + '1');
+            }
+            binaryToChars(binaryString) {
+    let result = '';
+    for (let i = 0; i < binaryString.length; i += 8) {
+        const byte = binaryString.substr(i, 8).padEnd(8, '0');
+        const charCode = parseInt(byte, 2);
+        result += String.fromCharCode(charCode);
+    }
+    return result;
+}
+
+            compress(text) {
+                this.steps = [];
+                this.codes = {};
+
+                const frequencies = this.getFrequencies(text);
+                this.steps.push('Calculated character frequencies:');
+                this.steps.push(JSON.stringify(frequencies, null, 2));
+
+                const tree = this.buildTree(frequencies);
+                this.generateCodes(tree);
+                let compressed = '';
+                for (let char of text) {
+                    compressed += this.codes[char];
+                 }
+
+                return {
+                     compressed,
+                    compressedChars: this.binaryToChars(compressed),
+                         tree,
+                        originalSize: text.length * 8,
+                        compressedSize: compressed.length
+                    };
+            }       
+
+            visualizeTree(node, prefix = '', isLeft = true) {
+                if (!node) return '';
+
+                let result = prefix;
+                result += isLeft ? '└── ' : '├── ';
+                result += node.char ? `'${node.char}' (${node.freq})` : `(${node.freq})`;
+                result += '\n';
+
+                const newPrefix = prefix + (isLeft ? '    ' : '│   ');
+                if (node.left) result += this.visualizeTree(node.left, newPrefix, false);
+                if (node.right) result += this.visualizeTree(node.right, newPrefix, true);
+
+                return result;
+            }
+        }
+       
+
+        function compress() {
+            const input = document.getElementById('input').value;
+            if (!input) {
+                alert('Please enter some text to compress');
+                return;
+            }
+
+            const huffman = new HuffmanCoder();
+            const result = huffman.compress(input);
+
+            // Display steps
+            document.getElementById('steps').innerHTML = huffman.steps
+                .map(step => `<div class="step">${step}</div>`)
+                .join('');
+
+            // Display tree visualization
+            document.getElementById('treeVisualization').innerHTML = 
+                `<pre>${huffman.visualizeTree(result.tree)}</pre>`;
+
+            // Display character codes
+            const codesTable = `
+                <table>
+                    <tr>
+                        <th>Character</th>
+                        <th>Code</th>
+                    </tr>
+                    ${Object.entries(huffman.codes)
+                        .map(([char, code]) => `
+                            <tr>
+                                <td>${char}</td>
+                                <td>${code}</td>
+                            </tr>
+                        `).join('')}
+                </table>
+            `;
+            document.getElementById('codes').innerHTML = codesTable;
+
+            // Display compressed output
+            document.getElementById('output').value = result.compressed;
+
+            // Update statistics
+            document.getElementById('originalSize').textContent = 
+                `${result.originalSize} bits (${Math.ceil(result.originalSize/8)} bytes)`;
+            document.getElementById('compressedSize').textContent = 
+                `${result.compressedSize} bits (${Math.ceil(result.compressedSize/8)} bytes)`;
+            document.getElementById('compressionRatio').textContent = 
+                `${((1 - result.compressedSize/result.originalSize) * 100).toFixed(2)}%`;
+            
+document.getElementById('output').value = result.compressed;
+document.getElementById('charOutput').value = result.compressedChars;
+
+        }
+
+        function clearAll() {
+            document.getElementById('input').value = '';
+            document.getElementById('output').value = '';
+            document.getElementById('steps').innerHTML = '';
+            document.getElementById('treeVisualization').innerHTML = '';
+            document.getElementById('codes').innerHTML = '';
+            document.getElementById('originalSize').textContent = '0 bytes';
+            document.getElementById('compressedSize').textContent = '0 bytes';
+            document.getElementById('compressionRatio').textContent = '0%';
+        }
+    </script>
+    <p>Click on the link for simulation of Huffman tree</p>
+    <a href="huffmantree.html">Simulation</a>
+</body>
+</html>

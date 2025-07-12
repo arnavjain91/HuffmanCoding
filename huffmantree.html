@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Huffman Tree Construction Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .step-info {
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        #treeCanvas {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .node {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: white;
+            border: 2px solid #007bff;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s ease;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .node.highlight {
+            background: #007bff;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .edge {
+            position: absolute;
+            height: 2px;
+            background: #007bff;
+            transform-origin: 0 0;
+            transition: all 0.5s ease;
+        }
+
+        .input-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #e9ecef;
+            margin: 10px 0;
+            border-radius: 2px;
+        }
+
+        .progress {
+            height: 100%;
+            background: #007bff;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Huffman Tree Construction Simulation</h1>
+        
+        <div class="input-section">
+            <h3>Input Text</h3>
+            <textarea id="inputText" placeholder="Enter text to build Huffman tree..."></textarea>
+            <button onclick="startSimulation()">Start Simulation</button>
+        </div>
+
+        <div class="controls">
+            <button id="prevBtn" onclick="previousStep()" disabled>Previous Step</button>
+            <button id="nextBtn" onclick="nextStep()" disabled>Next Step</button>
+            <button id="playBtn" onclick="toggleAutoPlay()">Play Animation</button>
+            <div id="stepCounter">Step: 0/0</div>
+        </div>
+
+        <div class="step-info" id="stepInfo"></div>
+        
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <div id="treeCanvas"></div>
+    </div>
+
+    <script>
+        class Node {
+            constructor(char, freq) {
+                this.char = char;
+                this.freq = freq;
+                this.left = null;
+                this.right = null;
+                this.id = Math.random().toString(36).substr(2, 9);
+            }
+        }
+
+        let simulationSteps = [];
+        let currentStep = -1;
+        let autoPlayInterval = null;
+        let nodes = new Map();
+
+        function getFrequencies(text) {
+            const freq = {};
+            for (let char of text) {
+                freq[char] = (freq[char] || 0) + 1;
+            }
+            return freq;
+        }
+
+        function createSimulationSteps(text) {
+            simulationSteps = [];
+            const frequencies = getFrequencies(text);
+            
+            // Initial nodes step
+            let pq = Object.entries(frequencies)
+                .map(([char, freq]) => new Node(char, freq))
+                .sort((a, b) => a.freq - b.freq);
+            
+            simulationSteps.push({
+                nodes: [...pq],
+                description: "Initial nodes created from character frequencies",
+                type: "initial"
+            });
+
+            while (pq.length > 1) {
+                const left = pq.shift();
+                const right = pq.shift();
+                
+                // Highlight nodes to be combined
+                simulationSteps.push({
+                    nodes: [...pq, left, right],
+                    highlight: [left.id, right.id],
+                    description: `Selecting nodes to combine: ${left.char || 'internal'}(${left.freq}) and ${right.char || 'internal'}(${right.freq})`,
+                    type: "selection"
+                });
+
+                const parent = new Node(null, left.freq + right.freq);
+                parent.left = left;
+                parent.right = right;
+                
+                let insertIndex = 0;
+                while (insertIndex < pq.length && pq[insertIndex].freq < parent.freq) {
+                    insertIndex++;
+                }
+                pq.splice(insertIndex, 0, parent);
+
+                // Show combined node
+                simulationSteps.push({
+                    nodes: [...pq],
+                    highlight: [parent.id],
+                    description: `Created new node with frequency ${parent.freq}`,
+                    type: "combination"
+                });
+            }
+
+            return simulationSteps;
+        }
+
+        function startSimulation() {
+            const text = document.getElementById('inputText').value;
+            if (!text) {
+                alert('Please enter some text');
+                return;
+            }
+
+            simulationSteps = createSimulationSteps(text);
+            currentStep = -1;
+            document.getElementById('prevBtn').disabled = true;
+            document.getElementById('nextBtn').disabled = false;
+            document.getElementById('stepCounter').textContent = `Step: 0/${simulationSteps.length}`;
+            document.getElementById('progress').style.width = '0%';
+            nextStep();
+        }
+
+        function drawTree(step) {
+            const canvas = document.getElementById('treeCanvas');
+            canvas.innerHTML = '';
+            
+            if (!step) return;
+
+            const positions = calculateNodePositions(step.nodes);
+            
+            // Draw edges first
+            positions.forEach((pos, node) => {
+                if (node.left) {
+                    drawEdge(canvas, pos, positions.get(node.left));
+                }
+                if (node.right) {
+                    drawEdge(canvas, pos, positions.get(node.right));
+                }
+            });
+
+            // Then draw nodes
+            positions.forEach((pos, node) => {
+                drawNode(canvas, pos, node, step.highlight?.includes(node.id));
+            });
+
+            // Update step info
+            document.getElementById('stepInfo').textContent = step.description;
+            document.getElementById('progress').style.width = 
+                `${((currentStep + 1) / simulationSteps.length) * 100}%`;
+        }
+
+        function calculateNodePositions(nodes) {
+            const positions = new Map();
+            const baseWidth = 1000;
+            const baseHeight = 500;
+            
+            function setPosition(node, level = 0, left = 0, right = baseWidth) {
+                if (!node) return;
+                
+                const x = (left + right) / 2;
+                const y = level * 100 + 50;
+                positions.set(node, { x, y });
+
+                if (node.left) setPosition(node.left, level + 1, left, x);
+                if (node.right) setPosition(node.right, level + 1, x, right);
+            }
+
+            setPosition(nodes[nodes.length - 1]);
+            return positions;
+        }
+
+        function drawNode(container, position, node, highlighted) {
+            const nodeEl = document.createElement('div');
+            nodeEl.className = 'node' + (highlighted ? ' highlight' : '');
+            nodeEl.style.left = `${position.x}px`;
+            nodeEl.style.top = `${position.y}px`;
+            nodeEl.innerHTML = `
+                <div>${node.char || ''}</div>
+                <div>${node.freq}</div>
+            `;
+            container.appendChild(nodeEl);
+        }
+
+        function drawEdge(container, start, end) {
+            const edge = document.createElement('div');
+            edge.className = 'edge';
+            
+            const length = Math.sqrt(
+                Math.pow(end.x - start.x, 2) + 
+                Math.pow(end.y - start.y, 2)
+            );
+            
+            const angle = Math.atan2(end.y - start.y, end.x - start.x);
+            
+            edge.style.width = `${length}px`;
+            edge.style.left = `${start.x + 30}px`;
+            edge.style.top = `${start.y + 30}px`;
+            edge.style.transform = `rotate(${angle}rad)`;
+            
+            container.appendChild(edge);
+        }
+
+        function nextStep() {
+            if (currentStep < simulationSteps.length - 1) {
+                currentStep++;
+                drawTree(simulationSteps[currentStep]);
+                document.getElementById('prevBtn').disabled = currentStep === 0;
+                document.getElementById('nextBtn').disabled = currentStep === simulationSteps.length - 1;
+                document.getElementById('stepCounter').textContent = 
+                    `Step: ${currentStep + 1}/${simulationSteps.length}`;
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                drawTree(simulationSteps[currentStep]);
+                document.getElementById('prevBtn').disabled = currentStep === 0;
+                document.getElementById('nextBtn').disabled = false;
+                document.getElementById('stepCounter').textContent = 
+                    `Step: ${currentStep + 1}/${simulationSteps.length}`;
+            }
+        }
+
+        function toggleAutoPlay() {
+            if (autoPlayInterval) {
+                clearInterval(autoPlayInterval);
+                autoPlayInterval = null;
+                document.getElementById('playBtn').textContent = 'Play Animation';
+            } else {
+                autoPlayInterval = setInterval(() => {
+                    if (currentStep < simulationSteps.length - 1) {
+                        nextStep();
+                    } else {
+                        clearInterval(autoPlayInterval);
+                        autoPlayInterval = null;
+                        document.getElementById('playBtn').textContent = 'Play Animation';
+                    }
+                }, 1000);
+                document.getElementById('playBtn').textContent = 'Pause Animation';
+            }
+        }
+    </script>
+</body>
+</html>

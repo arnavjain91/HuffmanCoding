@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huffman Coding Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #00071a;
+            color: white;
+        }
+        #textAreaContainer {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        #textArea {
+            width: 400px;
+            height: 150px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            color: #333;
+        }
+        #runButton {
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #runButton:hover {
+            background-color: #0056b3;
+        }
+        #huffmanTable {
+            display: none; /* Initially hidden */
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #003366;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #huffmanTable table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #huffmanTable th, #huffmanTable td {
+            border: 1px solid #444;
+            padding: 10px;
+            text-align: left;
+        }
+        #huffmanTable th {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="textAreaContainer">
+        <textarea id="textArea" placeholder="Enter text here..."></textarea>
+        <button id="runButton" onclick="startHuffman()">Generate Huffman Tree</button>
+    </div>
+    <div id="huffmanTable">
+        <h2>Huffman Coding Table</h2>
+        <table id="codingTable">
+            <thead>
+                <tr>
+                    <th>Character</th>
+                    <th>Frequency</th>
+                    <th>Huffman Code</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Coding table rows will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+    <script src="C:\Users\dell\Desktop\AA\object.js"></script>
+    <script src="C:\Users\dell\Desktop\AA\sketch.js"></script>
+</body>
+</html>
